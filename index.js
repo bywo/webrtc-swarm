@@ -10,6 +10,7 @@ var debug_heartbeat = require('debug')('webrtc-swarm:heartbeat')
 module.exports = WebRTCSwarm
 
 GIVEUP_TIMEOUT = 8 * 1000
+var connectSetTimeout;
 
 function WebRTCSwarm (hub, opts) {
   if (!(this instanceof WebRTCSwarm)) return new WebRTCSwarm(hub, opts)
@@ -221,6 +222,9 @@ function subscribe (swarm, hub) {
     }
     cb()
   }))
+
+  // announce immediately
+  connect(swarm, hub, rand)
 }
 
 function announce(swarm, hub, rand, cb) {
@@ -238,7 +242,9 @@ function unannounce(swarm, hub, to) {
 function connect (swarm, hub, rand) {
   if (swarm.closed || swarm.peers.length >= swarm.maxPeers) return
   announce(swarm, hub, rand, function () {
-    setTimeout(connect.bind(null, swarm, hub, rand),
+    // ensure any other connect timeout is cleared
+    clearTimeout(connectSetTimeout)
+    connectSetTimeout = setTimeout(connect.bind(null, swarm, hub, rand),
         Math.floor(Math.random() * 2000) + (swarm.peers.length ? 13000 : 3000))
   })
 }
